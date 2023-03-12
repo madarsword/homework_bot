@@ -39,7 +39,12 @@ formatter = logging.Formatter(
     '%(asctime)s - %(levelname)s - %(message)s'
 )
 
-handler = RotatingFileHandler('main.log', maxBytes=50000000, backupCount=5, encoding='UTF-8')
+handler = RotatingFileHandler(
+    'main.log',
+    maxBytes=50000000,
+    backupCount=5,
+    encoding='UTF-8'
+)
 handler.setFormatter(formatter)
 logger.addHandler(handler)
 
@@ -126,7 +131,7 @@ def main():
     """Основная логика работы бота."""
     if not check_tokens():
         raise SystemExit('Критическая ошибка, бот остановлен')
-    
+
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     current_timestamp = int(time.time())
 
