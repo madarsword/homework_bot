@@ -8,11 +8,6 @@ class UnknownStatusException(KeyError):
     pass
 
 
-class TelegramApiException(Exception):
-    """Telegram API не вернул ответ."""
-    pass
-
-
 class HomeworkMissingException(Exception):
     """В ответе API домашки нет ключа `homework_name`."""
     pass

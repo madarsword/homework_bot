@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 from exceptions import (ApiResponseException, ApiUnknownException,
                         EndpointUnavailableException, HomeworkMissingException,
                         IncorrectResponseException, SendMessageException,
-                        TelegramApiException, UnknownStatusException)
+                        UnknownStatusException)
 
 load_dotenv()
 
