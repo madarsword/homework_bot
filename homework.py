@@ -8,17 +8,10 @@ import requests
 import telegram
 from dotenv import load_dotenv
 
-from exceptions import (
-    IncorrectResponseException,
-    UnknownStatusException,
-    TelegramApiException,
-    HomeworkMissingException,
-    ApiUnknownException,
-    ApiResponseException,
-    EndpointUnavailableException,
-    SendMessageException
-)
-
+from exceptions import (ApiResponseException, ApiUnknownException,
+                        EndpointUnavailableException, HomeworkMissingException,
+                        IncorrectResponseException, SendMessageException,
+                        TelegramApiException, UnknownStatusException)
 
 load_dotenv()
 
