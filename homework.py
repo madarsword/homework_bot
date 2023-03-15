@@ -7,11 +7,8 @@ from logging.handlers import RotatingFileHandler
 import requests
 import telegram
 from dotenv import load_dotenv
-from requests import HTTPError
 
-from exceptions import (HomeworkMissingException, IncorrectResponseException,
-                        TelegramAPIException, UnknownStatusException)
-
+from exceptions import *
 
 load_dotenv()
 
@@ -68,10 +65,10 @@ def send_message(bot, message):
         logger.debug(f'Попытка отправки сообщения: {message}')
         bot.send_message(TELEGRAM_CHAT_ID, message)
         logger.debug(f'Сообщение {message} успешно отправлено')
-    except Exception as error:
+    except SendMessageException as error:
         error_message = f'Ошибка при отправке сообщения: {error}'
         logger.exception(error_message)
-        raise TelegramAPIException(error_message)
+        raise TelegramApiException(error_message)
 
 
 def get_api_answer(current_timestamp):
@@ -81,33 +78,34 @@ def get_api_answer(current_timestamp):
     try:
         logger.debug('Попытка запросить ответ API')
         response = requests.get(ENDPOINT, headers=HEADERS, params=params)
+    except ConnectionRefusedError as error:
+        error_message = f'Ресурс {ENDPOINT} недоступен: {error}'
+        raise EndpointUnavailableException(error_message) from error
+    except Exception as error:
+        error_message = f'Ошибка при запросе к API: {error}'
+        raise ApiUnknownException(error_message) from error
+    finally:
         if response.status_code == HTTPStatus.OK:
             logger.debug('Ответ API получен')
             return response.json()
-        raise HTTPError()
-    except (HTTPError, ConnectionRefusedError) as error:
-        error_message = f'Ресурс {ENDPOINT} недоступен: {error}'
-        logger.exception(error_message)
-        raise HTTPError(error_message)
-    except Exception as error:
-        error_message = f'Ошибка при запросе к API: {error}'
-        logger.exception(error_message)
-        raise Exception(error_message)
+        raise ApiResponseException(
+            f'Код ответа API: `{response.status_code}` '
+            f'при параметрах: `{params}`'
+        )
 
 
 def check_response(response):
     """Проверяет ответ API на соответствие документации."""
     logger.debug('Проверка ответа сервиса на корректность')
     if (isinstance(response, dict)
-            and len(response) != 0
             and 'current_date' in response
             and 'homeworks' in response
             and isinstance(response.get('homeworks'), list)):
         return response.get('homeworks')
-    else:
-        error_message = 'Ответ API не соответствует документации'
-        logger.exception(error_message)
-        raise IncorrectResponseException(error_message)
+    error_message = ('Ответ API не соответствует документации, '
+                     f'тип ответа является {type(response)} вместо dict')
+    logger.exception(error_message)
+    raise IncorrectResponseException(error_message)
 
 
 def parse_status(homework):
@@ -121,7 +119,6 @@ def parse_status(homework):
     if homework_status not in HOMEWORK_VERDICTS:
         error_message = (
             f'Получен неизвестный статус домашней работы: {homework_status}')
-        logger.exception(error_message)
         raise UnknownStatusException(error_message)
     verdict = HOMEWORK_VERDICTS.get(homework_status)
     return f'Изменился статус проверки работы "{homework_name}". {verdict}'
@@ -145,9 +142,13 @@ def main():
             else:
                 logger.debug('Нет обновлений статусов домашних работ')
             current_timestamp = int(time.time())
+        except SendMessageException as error:
+            message = f'Сбой в работе программы: {error}'
+            logger.exception(message)
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
-            bot.send_message(bot, message)
+            logger.exception(message)
+            send_message(bot, message)
         finally:
             time.sleep(RETRY_PERIOD)
 
