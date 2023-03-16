@@ -111,8 +111,8 @@ def check_response(response):
             f'тип ответа является {type(response)} вместо dict'
         )
         raise IncorrectTypeResponseException(error_message)
-    if (not 'current_date' in response
-        or not 'homeworks' in response):
+    if ('current_date' not in response
+       or 'homeworks' not in response):
         raise UnknownStatusException(
             'Ответ API: '
             f'{response}'
