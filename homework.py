@@ -10,7 +10,8 @@ from dotenv import load_dotenv
 
 from exceptions import (ApiResponseException, ApiUnknownException,
                         EndpointUnavailableException, HomeworkMissingException,
-                        IncorrectResponseException, SendMessageException,
+                        IncorrectTypeResponseException,
+                        KeyIncorrectTypeException, SendMessageException,
                         UnknownStatusException)
 
 load_dotenv()
@@ -87,14 +88,13 @@ def get_api_answer(current_timestamp):
     except Exception as error:
         error_message = f'Ошибка при запросе к API: {error}'
         raise ApiUnknownException(error_message) from error
-    finally:
-        if response.status_code == HTTPStatus.OK:
-            logger.debug('Ответ API получен')
-            return response.json()
-        raise ApiResponseException(
-            f'Код ответа API: `{response.status_code}` '
-            f'при параметрах: `{params}`'
-        )
+    if response.status_code == HTTPStatus.OK:
+        logger.debug('Ответ API получен')
+        return response.json()
+    raise ApiResponseException(
+        f'Код ответа API: `{response.status_code}` '
+        f'при параметрах: `{params}`'
+    )
 
 
 def check_response(response):
@@ -105,10 +105,29 @@ def check_response(response):
             and 'homeworks' in response
             and isinstance(response.get('homeworks'), list)):
         return response.get('homeworks')
-    error_message = ('Ответ API не соответствует документации, '
-                     f'тип ответа является {type(response)} вместо dict')
-    logger.exception(error_message)
-    raise IncorrectResponseException(error_message)
+    if not isinstance(response, dict):
+        error_message = (
+            'Ответ API не соответствует документации, '
+            f'тип ответа является {type(response)} вместо dict'
+        )
+        raise IncorrectTypeResponseException(error_message)
+    if (not 'current_date' in response
+        or not 'homeworks' in response):
+        raise UnknownStatusException(
+            'Ответ API: '
+            f'{response}'
+        )
+    if not isinstance(response.get('homeworks'), list):
+        homeworks_type = response.get('homeworks')
+        raise KeyIncorrectTypeException(
+            'Ответ API не соответствует документации. '
+            'Значение ключа `homeworks`: '
+            f'{type(homeworks_type)} вместо list'
+        )
+    error_message = (
+        'Неизвестная ошибка в ответе API'
+    )
+    raise ApiResponseException(error_message)
 
 
 def parse_status(homework):
@@ -134,6 +153,7 @@ def main():
 
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
     current_timestamp = int(time.time())
+    LAST_ERROR = ''
 
     while True:
         try:
@@ -145,13 +165,12 @@ def main():
             else:
                 logger.debug('Нет обновлений статусов домашних работ')
             current_timestamp = int(time.time())
-        except SendMessageException as error:
-            message = f'Сбой в работе программы: {error}'
-            logger.exception(message)
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             logger.exception(message)
-            send_message(bot, message)
+            if LAST_ERROR != error:
+                LAST_ERROR = error
+                send_message(bot, message)
         finally:
             time.sleep(RETRY_PERIOD)
 

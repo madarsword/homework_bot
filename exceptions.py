@@ -1,10 +1,15 @@
-class IncorrectResponseException(TypeError):
+class IncorrectTypeResponseException(TypeError):
     """Ответ API не соответствует ожидаемому типу."""
     pass
 
 
+class KeyIncorrectTypeException(TypeError):
+    """Значение ключа `homeworks` не является типом `list`."""
+    pass
+
+
 class UnknownStatusException(KeyError):
-    """В ответе не обнаружены ожидаемые ключи."""
+    """В ответе не обнаружены ключи `current_date` или `homeworks`."""
     pass
 
 
@@ -26,6 +31,7 @@ class ApiResponseException(Exception):
 class EndpointUnavailableException(Exception):
     """Эндпоинт не доступен."""
     pass
+
 
 class SendMessageException(Exception):
     """Ошибка при отправке сообщения."""
