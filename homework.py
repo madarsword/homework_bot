@@ -157,8 +157,8 @@ def main():
             else:
                 logger.debug('Нет обновлений статусов домашних работ')
             current_timestamp = int(time.time())
-        except Exception as error: 
-            message = f'Сбой в работе программы: {error}' 
+        except Exception as error:
+            message = f'Сбой в работе программы: {error}'
             logger.exception(message)
             if last_error != error:
                 try:
