@@ -72,7 +72,7 @@ def send_message(bot, message):
     except Exception as error:
         error_message = f'Ошибка при отправке сообщения: {error}'
         logger.exception(error_message)
-        raise SendMessageException(error_message)
+        raise SendMessageException(error_message) from error
 
 
 def get_api_answer(current_timestamp):
@@ -100,11 +100,6 @@ def get_api_answer(current_timestamp):
 def check_response(response):
     """Проверяет ответ API на соответствие документации."""
     logger.debug('Проверка ответа сервиса на корректность')
-    if (isinstance(response, dict)
-            and 'current_date' in response
-            and 'homeworks' in response
-            and isinstance(response.get('homeworks'), list)):
-        return response.get('homeworks')
     if not isinstance(response, dict):
         error_message = (
             'Ответ API не соответствует документации, '
@@ -124,10 +119,7 @@ def check_response(response):
             'Значение ключа `homeworks`: '
             f'{type(homeworks_type)} вместо list'
         )
-    error_message = (
-        'Неизвестная ошибка в ответе API'
-    )
-    raise ApiResponseException(error_message)
+    return response.get('homeworks')
 
 
 def parse_status(homework):
@@ -152,8 +144,8 @@ def main():
         raise SystemExit('Критическая ошибка, бот остановлен')
 
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    current_timestamp = int(time.time())
-    LAST_ERROR = ''
+    current_timestamp = int(time.time()) - RETRY_PERIOD
+    last_error = ''
 
     while True:
         try:
@@ -165,12 +157,16 @@ def main():
             else:
                 logger.debug('Нет обновлений статусов домашних работ')
             current_timestamp = int(time.time())
-        except Exception as error:
-            message = f'Сбой в работе программы: {error}'
+        except Exception as error: 
+            message = f'Сбой в работе программы: {error}' 
             logger.exception(message)
-            if LAST_ERROR != error:
-                LAST_ERROR = error
-                send_message(bot, message)
+            if last_error != error:
+                try:
+                    send_message(bot, message)
+                except SendMessageException:
+                    pass
+                else:
+                    last_error = error
         finally:
             time.sleep(RETRY_PERIOD)
 
